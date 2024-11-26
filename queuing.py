@@ -9,14 +9,14 @@ from typing import Tuple, List, Literal, Any, Generator
 generator: np.random.Generator = None
 PRIORITIES = Literal["", "F", "T"] 
 
-def experiment(nServers: int, arrivalRate, serviceTimeDist: Generator, minSamples: int = 100, maxSamples: int= 10000, 
+def experiment(nServers: int, arrivalRate: float, serviceTimeDist: Generator, minSamples: int = 100, maxSamples: int= 10000, 
                seed: int=None, targetSTD: float=None, prioType: PRIORITIES = "", verbose=True):
     """
     Returns average waiting time and Standard deviation (S / sqrt(n)) for the queueing problem.
 
     Args:
         nServers: Amount of servers n available in the problem.
-        Arrival rate: \lambda for the inter-arrrival time distribution
+        Arrival rate: \\lambda for the inter-arrrival time distribution
         serviceTimeDist: Service Time distribution Generator with the desired properties
         minSamples: Minimum amount of samples to take (relevant when using STD termination)
         maxSamples: Maximum amounmt of samples to take before attempting to terminate.
@@ -88,13 +88,13 @@ def customer(env: simpy.Environment, name: str, queue: Queue, serviceTime: float
         yield env.process(queue.serve(serviceTime))
         if verbose: print(f'{name} leaves the queue at {env.now:.2f}.')
 
-def setup(env: simpy.Environment, nServer: int, arrivalRate: int, serviceTimeDist: Generator, finish: simpy.Event, 
+def setup(env: simpy.Environment, nServer: int, arrivalRate: float, serviceTimeDist: Generator, finish: simpy.Event, 
           targetSTD: float, minSamples: int, maxSamples: int, samples: List, prioType: PRIORITIES= "", verbose=True):
     """
     Args:
         env: Simpy Environment
         nServer: Amount of servers in the system
-        arrivalRate: Rate \lamba that customers arrive in the queue.
+        arrivalRate: Rate \\lamba that customers arrive in the queue.
         serviceTimeDist: Generator object that provides the desired service time distribution.
         finish: simpy Event object that signifies termintion.
         targetSTD:   Target standard deviation for use in general where to stop algorithm (lecture 3, slide 10) 
@@ -105,17 +105,18 @@ def setup(env: simpy.Environment, nServer: int, arrivalRate: int, serviceTimeDis
         vebose:  Wether to print customer status to stdout. 
     """
     prevLenSamples = 0
+    arrivalTimeDist = markovTimeDist(arrivalRate)
 
     queue = Queue(env, nServer)
 
     customer_count = itertools.count()
     for _ in range(4): # is this necessary?
         serviceTime = next(serviceTimeDist)
-
+    
         env.process(customer(env, f'Customer {next(customer_count)}', queue, serviceTime, prioType, samples, verbose))
 
     while True:
-        yield env.timeout(generator.exponential(arrivalRate))
+        yield env.timeout(next(arrivalTimeDist))
 
         serviceTime = next(serviceTimeDist)
         env.process(customer(env, f'Customer {next(customer_count)}', queue, serviceTime, prioType, samples, verbose))
@@ -150,12 +151,12 @@ def markovTimeDist(rate: float):
     for the same experimet.
 
     Args:
-        rate: \Lambda for the exponential distribution
+        rate: \\Lambda for the exponential distribution
     
     Returns: A sampled timespan.
     """
     while True:
-        yield generator.exponential(rate)
+        yield generator.exponential(1 / rate)
 
 
 def deterministicTimeDist(tInter: float):
@@ -179,27 +180,28 @@ def longtailHyperexponentialDist(rateA: float, rateB: float, probA: float):
         probA: Probability of using rate A. Rate B is implied to be 1 - probA.
 
 
-    Returns: an exponential distribution with \lambda_A = rateA with probability p_A = probA
-             and an exponential distribution with \labda_B = rateB with probability p_B = 1 - probA
+    Returns: an exponential distribution with \\lambda_A = rateA with probability p_A = probA
+             and an exponential distribution with \\labda_B = rateB with probability p_B = 1 - probA
     """
     while True:
         roll = generator.random()
 
         if probA < roll:
-            yield generator.exponential(rateA)
+            yield generator.exponential(1 / rateA)
         else:
-            yield generator.exponential(rateB)
+            yield generator.exponential(1 / rateB)
 
 if __name__ == "__main__":
     # Setup and start the simulation
     N_SERVER = 2
-    LAMBDA = 1
+    RHO = 0.9
     MU = 1
-    SEED = 42
+    LAMBDA = RHO * N_SERVER * MU
+    SEED = None
 
     minSamples = 100
     maxSamples = 10000
 
     l, s = experiment(N_SERVER, LAMBDA, markovTimeDist(MU), minSamples, maxSamples, SEED, 0.01, "F", False)
-    print(np.mean(l))
-    print(f"std: {s}")
+    print(f"mean: {np.mean(l)}")
+    print(f"std:  {s}")
