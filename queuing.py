@@ -4,22 +4,27 @@ import itertools
 import random
 import simpy
 
-seed = 42
-numberOfServers = 2
-serviceTime = 5
-arrivalRate = 7
+SEED = 42
+generator: np.random.Generator = None
+
+N_SERVER = 2
+LAMBDA = 1
+MU = 1
+MEAN_SERVICE_TIME = 1 / LAMBDA
+MEAN_ARRIVAL_TIME = 1 / MU
+
 simTime = 20
 
-# TODO: Rework serviceTime into service rate with Markov distribution
+
 
 class Queue:
-    def __init__(self, env: simpy.Environment, numberOfServers: int, serviceTime: float):
+    def __init__(self, env: simpy.Environment, numberOfServers: int, serviceRate: float):
         self.env = env
         self.servers = simpy.Resource(env, numberOfServers)
-        self.serviceTime = serviceTime
+        self.serviceRate = serviceRate
 
     def serve(self, customer):
-        yield self.env.timeout(self.serviceTime)
+        yield self.env.timeout(generator.exponential(self.serviceRate))
 
 
 def customer(env: simpy.Environment, name: str, queue: Queue):
@@ -36,24 +41,36 @@ def customer(env: simpy.Environment, name: str, queue: Queue):
         print(f'{name} leaves the queue at {env.now:.2f}.')
 
 
-def setup(env: simpy.Environment, num_machines: int, serviceTime: float, t_inter: int):
-    queue = Queue(env, num_machines, serviceTime)
+def setup(env: simpy.Environment, num_machines: int, serviceRate: float, arrivalRate: int, finish: simpy.Event):
+    queue = Queue(env, num_machines, serviceRate)
 
     customer_count = itertools.count()
     for _ in range(4):
         env.process(customer(env, f'Customer {next(customer_count)}', queue))
 
     while True:
-        yield env.timeout(random.randint(t_inter - 2, t_inter + 2))
+        yield env.timeout(generator.exponential(arrivalRate))
         env.process(customer(env, f'Customer {next(customer_count)}', queue))
+
+        if env.now >= 20:
+            finish.succeed()
+        
+def instantieateRNG(seed=None):
+    global generator
+    generator = np.random.default_rng(seed)
+
+  
+
+instantieateRNG()
 
 if __name__ == "__main__":
     # Setup and start the simulation
-    random.seed(seed)
+    instantieateRNG(SEED)
 
     # Create an environment and start the setup process
     env = simpy.Environment()
-    env.process(setup(env, numberOfServers, serviceTime, arrivalRate))
+    outEvent = simpy.Event(env)
+    env.process(setup(env, N_SERVER, MEAN_SERVICE_TIME, MEAN_ARRIVAL_TIME, outEvent))
 
     # Execute!
-    env.run(until=simTime)
+    env.run(until=outEvent)
