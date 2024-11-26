@@ -1,3 +1,5 @@
+import numpy as np
+
 import itertools
 import random
 import simpy
@@ -8,32 +10,34 @@ serviceTime = 5
 arrivalRate = 7
 simTime = 20
 
+# TODO: Rework serviceTime into service rate with Markov distribution
 
 class Queue:
-    def __init__(self, env, numberOfServers, serviceTime):
+    def __init__(self, env: simpy.Environment, numberOfServers: int, serviceTime: float):
         self.env = env
-        self.server = simpy.Resource(env, numberOfServers)
+        self.servers = simpy.Resource(env, numberOfServers)
         self.serviceTime = serviceTime
 
     def serve(self, customer):
         yield self.env.timeout(self.serviceTime)
-        job = random.randint(50, 99)
-        print(f"Completed {job}% of {customer}'s request.")
 
 
-def customer(env, name, queue):
-    print(f'{name} arrives at the queue at {env.now:.2f}.')
-    with queue.server.request() as request:
+def customer(env: simpy.Environment, name: str, queue: Queue):
+    tQueue = env.now
+    print(f'{name} enters the queue at {tQueue:.2f}.')
+    with queue.servers.request() as request:
         yield request
 
-        print(f'{name} enters the queue at {env.now:.2f}.')
+        tStart = env.now
+        print(f'{name} starts processing at {tStart:.2f}.')
+        print(f'{name} waiting time {tStart - tQueue}')
         yield env.process(queue.serve(name))
 
         print(f'{name} leaves the queue at {env.now:.2f}.')
 
 
-def setup(env, num_machines, washtime, t_inter):
-    queue = Queue(env, num_machines, washtime)
+def setup(env: simpy.Environment, num_machines: int, serviceTime: float, t_inter: int):
+    queue = Queue(env, num_machines, serviceTime)
 
     customer_count = itertools.count()
     for _ in range(4):
@@ -43,13 +47,13 @@ def setup(env, num_machines, washtime, t_inter):
         yield env.timeout(random.randint(t_inter - 2, t_inter + 2))
         env.process(customer(env, f'Customer {next(customer_count)}', queue))
 
+if __name__ == "__main__":
+    # Setup and start the simulation
+    random.seed(seed)
 
-# Setup and start the simulation
-random.seed(seed)
+    # Create an environment and start the setup process
+    env = simpy.Environment()
+    env.process(setup(env, numberOfServers, serviceTime, arrivalRate))
 
-# Create an environment and start the setup process
-env = simpy.Environment()
-env.process(setup(env, numberOfServers, serviceTime, arrivalRate))
-
-# Execute!
-env.run(until=simTime)
+    # Execute!
+    env.run(until=simTime)
