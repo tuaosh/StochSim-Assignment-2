@@ -110,10 +110,6 @@ def setup(env: simpy.Environment, nServer: int, arrivalRate: float, serviceTimeD
     queue = Queue(env, nServer)
 
     customer_count = itertools.count()
-    for _ in range(4): # is this necessary?
-        serviceTime = next(serviceTimeDist)
-    
-        env.process(customer(env, f'Customer {next(customer_count)}', queue, serviceTime, prioType, samples, verbose))
 
     while True:
         yield env.timeout(next(arrivalTimeDist))
@@ -200,8 +196,8 @@ if __name__ == "__main__":
     SEED = None
 
     minSamples = 100
-    maxSamples = 10000
+    maxSamples = 100
 
-    l, s = experiment(N_SERVER, LAMBDA, markovTimeDist(MU), minSamples, maxSamples, SEED, 0.01, "F", False)
+    l, s = experiment(N_SERVER, LAMBDA, markovTimeDist(MU), minSamples, maxSamples, SEED, 0.01, "F", True)
     print(f"mean: {np.mean(l)}")
     print(f"std:  {s}")
