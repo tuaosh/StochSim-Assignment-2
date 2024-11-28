@@ -177,7 +177,7 @@ def longtailHyperexponentialDist(rateA: float, rateB: float, probA: float):
 
 
     Returns: an exponential distribution with \\lambda_A = rateA with probability p_A = probA
-             and an exponential distribution with \\labda_B = rateB with probability p_B = 1 - probA
+             and an exponential distribution with \\lambda_B = rateB with probability p_B = 1 - probA
     """
     while True:
         roll = generator.random()
@@ -221,7 +221,7 @@ def readTxt(fname: str) -> List[List[float]]:
         
     # Reconstruct the list of lists, ignoring NaN values
     listOfLists = [row[~np.isnan(row)].tolist() for row in data]
-    
+
     return listOfLists
 
 
