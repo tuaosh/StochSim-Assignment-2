@@ -206,6 +206,24 @@ def saveTxt(fname: str, listOfLists: List[List[float]]) -> bool:
 
     np.savetxt(fname, out)
 
+def readTxt(fname: str) -> List[List[float]]:
+    """
+    Reads a TXT file saved by saveTxt back into a list of lists.
+
+    Args:
+        fname: The filename/path of the file to read.
+
+    Returns:
+        List of lists of floats, reconstructed from the file.
+    """
+    # Load the file into a NumPy array
+    data = np.loadtxt(fname)
+        
+    # Reconstruct the list of lists, ignoring NaN values
+    listOfLists = [row[~np.isnan(row)].tolist() for row in data]
+    
+    return listOfLists
+
 
 if __name__ == "__main__":
     # Setup and start the simulation
