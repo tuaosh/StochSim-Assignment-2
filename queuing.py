@@ -187,6 +187,26 @@ def longtailHyperexponentialDist(rateA: float, rateB: float, probA: float):
         else:
             yield generator.exponential(1 / rateB)
 
+
+def saveTxt(fname: str, listOfLists: List[List[float]]) -> bool:
+    """
+    Takes a List of lists with different arbitrary lengths and exports it as a numpy array TXT file
+    with missing values as NaN.
+
+    Args:
+        fname: the filename/path for the file
+        listOfLists: The list of lists of arbitrary lengths.
+    """
+    maxLen = max([len(l) for l in listOfLists])
+
+    out = np.empty((len(listOfLists), maxLen))
+    out[:,:] = np.nan
+    for i, l in enumerate(listOfLists):
+        out[i,:len(l)] = l[:]
+
+    np.savetxt(fname, out)
+
+
 if __name__ == "__main__":
     # Setup and start the simulation
     N_SERVER = 2
