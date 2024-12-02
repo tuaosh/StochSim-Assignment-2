@@ -7,3 +7,4 @@ git clone https://github.com/tuaosh/StochSim-Assignment-2.git
 cd StochSim-Assignment-2
 pip install -r requirements.txt
 ```
+To avoid running all experiments, the resulting data has been stored in the following [drive](https://drive.google.com/file/d/1W834MkvyWoFxVqD4bSNxOv27d0ObJAUz/view?usp=sharing) due to size constraints. For visualizations of this data, see the [figures](/figures) folder.
