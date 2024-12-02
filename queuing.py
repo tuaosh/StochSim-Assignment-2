@@ -104,7 +104,9 @@ def setup(env: simpy.Environment, nServer: int, arrivalRate: float, serviceTimeD
         prioType: Character literal; F-FIFO, no priority queueing; T-Time, queue priority based on shortest time.
         vebose:  Wether to print customer status to stdout. 
     """
-    prevLenSamples = 0
+    sumWait = 0.0
+    sumWaitSquared = 0.0
+    prevLenSamples = 2
     arrivalTimeDist = markovTimeDist(arrivalRate)
 
     queue = Queue(env, nServer)
@@ -118,13 +120,21 @@ def setup(env: simpy.Environment, nServer: int, arrivalRate: float, serviceTimeD
         env.process(customer(env, f'Customer {next(customer_count)}', queue, serviceTime, prioType, samples, verbose))
 
         if len(samples) > prevLenSamples: # Only take stats if a new amount of samples are available/ 
-            if not prevLenSamples % 1000:
+            if not prevLenSamples % 10000:
                 print(f"Samples: {prevLenSamples}")
+            for item in samples[prevLenSamples:]:
+                sumWait += item
+                sumWaitSquared += np.square(item)
+
             prevLenSamples = len(samples)
+            mean     = sumWait / len(samples)
+            variance = 1 / (len(samples)-1) * (sumWaitSquared - (np.square(sumWait) / len(samples)))
+            #std = np.std(samples, ddof = 1)
+            std = np.sqrt(variance)
+            
+            if not prevLenSamples % 10000: 
+                print(std / np.sqrt(prevLenSamples))
 
-            std = np.std(samples, ddof = 1)
-
-           
             if prevLenSamples > minSamples and targetSTD is not None:
                  # Algorithm from Lecture 3 page 10.
                 if std / np.sqrt(prevLenSamples) <= targetSTD:
